@@ -2,7 +2,7 @@
 
 > File này **tự sinh** bởi `scripts/grade.py`. **Không** viết / sửa tay.
 
-- Generated (UTC): `2026-11-19T08:57:37.396431+00:00`
+- Generated (UTC): `2026-11-19T09:18:08.216548+00:00`
 - Framework: `openai-compatible/openrouter`
 - Technical failure: **False**
 
@@ -40,7 +40,7 @@
 
 ```text
 ..........                                                               [100%]
-10 passed in 1.20s
+10 passed in 1.26s
 ```
 
 ## Notes
