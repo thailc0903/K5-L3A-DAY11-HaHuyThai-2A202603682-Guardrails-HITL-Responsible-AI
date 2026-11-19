@@ -51,14 +51,24 @@ def detect_injection(user_input: str) -> InputStatus:
     Returns:
         ``"BLOCK"`` if injection detected (chặn), ``"ALLOW"`` otherwise (cho qua).
     """
-    INJECTION_PATTERNS = [
-        # TODO: Add at least 5 regex patterns
-        # Example:
-        # r"ignore (all )?(previous|above) instructions",
-    ]
+    # TODO: Add at least 5 regex patterns
+    # Example:
+    # r"ignore (all )?(previous|above) instructions",
+    # Normalize first so invisible Unicode characters cannot bypass the patterns.
+    normalized = re.sub(r"[\u200b-\u200f\u2060\ufeff]", "", user_input)
+    normalized = re.sub(r"\s+", " ", normalized).strip()
 
-    for pattern in INJECTION_PATTERNS:
-        if re.search(pattern, user_input, re.IGNORECASE):
+    injection_patterns = [
+        r"\bignore\s+(?:all\s+)?(?:previous|above|prior)\s+instructions?\b",
+        r"\byou\s+are\s+now\b",
+        r"\bsystem\s+prompt\b",
+        r"\breveal\s+(?:your|the)\s+(?:instructions?|prompt)\b",
+        r"\bpretend\s+(?:you\s+are|to\s+be)\b",
+        r"\bact\s+as\s+(?:an?\s+)?unrestricted\b",
+        r"\bdisregard\s+(?:all\s+)?(?:previous|prior)\s+instructions?\b",
+    ]
+    for pattern in injection_patterns:
+        if re.search(pattern, normalized, re.IGNORECASE):
             return "BLOCK"
     return "ALLOW"
 
@@ -84,14 +94,19 @@ def topic_filter(user_input: str) -> InputStatus:
         ``"BLOCK"`` = chặn (off-topic hoặc topic cấm).
         ``"ALLOW"`` = cho qua (câu banking hợp lệ).
     """
-    input_lower = user_input.lower()
+    input_lower = user_input.casefold()
 
     # TODO: Implement logic:
     # 1. If input contains any blocked topic -> return "BLOCK"
     # 2. If input doesn't contain any allowed topic -> return "BLOCK"
     # 3. Otherwise -> return "ALLOW"
+    if any(topic.casefold() in input_lower for topic in BLOCKED_TOPICS):
+        return "BLOCK"
 
-    pass  # Replace with your implementation
+    if not any(topic.casefold() in input_lower for topic in ALLOWED_TOPICS):
+        return "BLOCK"
+
+    return "ALLOW"
 
 
 # ============================================================
@@ -150,8 +165,19 @@ class InputGuardrailPlugin(base_plugin.BasePlugin):
         # 2. Call topic_filter(text)
         #    - If "BLOCK": increment blocked_count, return self._block_response("...")
         # 3. If both return "ALLOW": return None (let message through)
+        if detect_injection(text) == "BLOCK":
+            self.blocked_count += 1
+            return self._block_response(
+                "Your request was blocked because it contains prompt-injection instructions."
+            )
 
-        pass  # Replace with your implementation
+        if topic_filter(text) == "BLOCK":
+            self.blocked_count += 1
+            return self._block_response(
+                "I can only help with safe VinBank banking questions."
+            )
+
+        return None
 
 
 # ============================================================
